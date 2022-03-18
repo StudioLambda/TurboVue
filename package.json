@@ -1,0 +1,55 @@
+{
+  "version": "0.1.0",
+  "license": "MIT",
+  "name": "turbo-vue",
+  "description": "Lightweight asynchronous data management for vue",
+  "info": "A way to manage async data in vue applications. Also includes a cache and an event system. Supports a ton of features and it's build on top of suspense.",
+  "keywords": [
+    "vue",
+    "swr",
+    "data",
+    "fetching",
+    "management",
+    "cache",
+    "events"
+  ],
+  "repository": {
+    "url": "https://github.com/StudioLambda/TurboVue"
+  },
+  "author": {
+    "name": "Erik C. Forés",
+    "email": "soc@erik.cat",
+    "url": "https://erik.cat"
+  },
+  "types": "./dist/turbo-vue.d.ts",
+  "main": "./dist/turbo-vue.umd.js",
+  "module": "./dist/turbo-vue.es.js",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": "./dist/turbo-vue.es.js",
+      "require": "./dist/turbo-vue.umd.js"
+    }
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "scripts": {
+    "start": "vite",
+    "dev": "vite --force",
+    "build": "vite build && tsc --skipLibCheck",
+    "serve": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^4.6.2",
+    "vite": "^2.8.6",
+    "@vitejs/plugin-vue": "^2.2.4"
+  },
+  "peerDependencies": {
+    "vue": "^3.2.0"
+  },
+  "dependencies": {
+    "turbo-query": "^1.4.0"
+  }
+}
