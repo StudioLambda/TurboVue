@@ -1,7 +1,19 @@
 import type { TurboQuery, TurboQueryOptions, TurboMutateValue } from 'turbo-query'
 import type { Ref, DeepReadonly } from 'vue'
 import { query, mutate, subscribe, forget, abort } from 'turbo-query'
-import { computed, ref, watch, readonly, onUnmounted, getCurrentInstance } from 'vue'
+import { computed, ref, watch, readonly, onUnmounted, getCurrentInstance, inject } from 'vue'
+
+/**
+ * The context key for the dependency injection (provide / inject)
+ */
+export const TurboVueContext = Symbol('turbo-vue-context')
+
+/**
+ * Injects the context options.
+ */
+export function injectTurboVue(value?: TurboVueOptions) {
+  return inject<TurboVueOptions | undefined>(TurboVueContext, value)
+}
 
 /**
  * Available options for turbo vue.
@@ -60,7 +72,7 @@ export type TurboVueResource<T> = [
 /**
  * Determines how a vue key looks like.
  */
-export type TurboVueKey = () => string | false | null | undefined
+export type TurboVueKey = () => string | false | null
 
 /**
  * Creates a new turbo resource with the given key and options.
@@ -69,11 +81,12 @@ export async function createTurboResource<T = any>(
   key: TurboVueKey,
   options?: TurboVueOptions
 ): Promise<TurboVueResource<T>> {
-  const turboQuery = options?.turbo?.query ?? query
-  const turboMutate = options?.turbo?.mutate ?? mutate
-  const turboSubscribe = options?.turbo?.subscribe ?? subscribe
-  const turboForget = options?.turbo?.forget ?? forget
-  const turboAbort = options?.turbo?.abort ?? abort
+  const contextOptions = inject<TurboVueOptions | undefined>(TurboVueContext)
+  const turboQuery = options?.turbo?.query ?? contextOptions?.turbo?.query ?? query
+  const turboMutate = options?.turbo?.mutate ?? contextOptions?.turbo?.mutate ?? mutate
+  const turboSubscribe = options?.turbo?.subscribe ?? contextOptions?.turbo?.subscribe ?? subscribe
+  const turboForget = options?.turbo?.forget ?? contextOptions?.turbo?.forget ?? forget
+  const turboAbort = options?.turbo?.abort ?? contextOptions?.turbo?.abort ?? abort
 
   /**
    * Key computation
