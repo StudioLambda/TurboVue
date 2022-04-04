@@ -23,6 +23,11 @@ export interface TurboVueOptions extends TurboQueryOptions {
    * A default turbo query instance to use if any.
    */
   turbo?: TurboQuery
+
+  /**
+   * Prevent the request from firing until the `refetch` method is called.
+   */
+  immediate?: boolean
 }
 
 export interface TurboVueResourceActions<T> {
@@ -87,6 +92,7 @@ export async function createTurboResource<T = any>(
   const turboSubscribe = options?.turbo?.subscribe ?? contextOptions?.turbo?.subscribe ?? subscribe
   const turboForget = options?.turbo?.forget ?? contextOptions?.turbo?.forget ?? forget
   const turboAbort = options?.turbo?.abort ?? contextOptions?.turbo?.abort ?? abort
+  const immediate = options?.immediate ?? contextOptions?.immediate ?? true
 
   /**
    * Key computation
@@ -126,7 +132,7 @@ export async function createTurboResource<T = any>(
   /**
    * Initially resolve the key if needed.
    */
-  if (computedKey.value) {
+  if (computedKey.value && immediate) {
     resource.value = await turboQuery<T>(computedKey.value, {
       stale: true,
       ...options,
