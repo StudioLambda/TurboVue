@@ -25,7 +25,8 @@ export interface TurboVueOptions extends TurboQueryOptions {
   turbo?: TurboQuery
 
   /**
-   * Prevent the request from firing until the `refetch` method is called.
+   * Prevent the request from firing until the `refetch` method is called
+   * or the computed key changed.
    */
   immediate?: boolean
 }
@@ -210,7 +211,7 @@ export async function createTurboResource<T = any>(
         unsubscribeErrors()
       })
     },
-    { immediate: true }
+    { immediate }
   )
 
   // Unmount automatically if we're inside a component.
