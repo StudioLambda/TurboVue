@@ -6,7 +6,7 @@ import { computed, ref, watch, readonly, onUnmounted, getCurrentInstance, inject
 /**
  * The context key for the dependency injection (provide / inject)
  */
-export const injectionKey = Symbol('turbo-vue-context') as InjectionKey<TurboVueOptions | undefined>
+export const injectionKey = Symbol('turbo-vue-context') as InjectionKey<TurboVueOptions>
 
 /**
  * Injects the context options.
