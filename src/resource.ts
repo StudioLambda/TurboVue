@@ -1,18 +1,18 @@
 import type { TurboQuery, TurboQueryOptions, TurboMutateValue } from 'turbo-query'
-import type { Ref, DeepReadonly } from 'vue'
+import type { Ref, DeepReadonly, InjectionKey } from 'vue'
 import { query, mutate, subscribe, forget, abort } from 'turbo-query'
 import { computed, ref, watch, readonly, onUnmounted, getCurrentInstance, inject } from 'vue'
 
 /**
  * The context key for the dependency injection (provide / inject)
  */
-export const TurboVueContext = Symbol('turbo-vue-context')
+export const injectionKey = Symbol('turbo-vue-context') as InjectionKey<TurboVueOptions>
 
 /**
  * Injects the context options.
  */
 export function injectTurboVue(value?: TurboVueOptions) {
-  return inject<TurboVueOptions | undefined>(TurboVueContext, value)
+  return inject(injectionKey, value)
 }
 
 /**
@@ -81,7 +81,7 @@ export async function createTurboResource<T = any>(
   key: TurboVueKey,
   options?: TurboVueOptions
 ): Promise<TurboVueResource<T>> {
-  const contextOptions = inject<TurboVueOptions | undefined>(TurboVueContext)
+  const contextOptions = inject(injectionKey)
   const turboQuery = options?.turbo?.query ?? contextOptions?.turbo?.query ?? query
   const turboMutate = options?.turbo?.mutate ?? contextOptions?.turbo?.mutate ?? mutate
   const turboSubscribe = options?.turbo?.subscribe ?? contextOptions?.turbo?.subscribe ?? subscribe
