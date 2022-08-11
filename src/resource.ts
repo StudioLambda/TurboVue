@@ -54,7 +54,7 @@ export interface TurboVueResourceActions<T> {
   /**
    * Refetches the current key.
    */
-  readonly refetch: (ops?: TurboQueryOptions) => Promise<T | undefined>
+  readonly refetch: () => Promise<T | undefined>
 
   /**
    * Mutates the current key.
@@ -197,6 +197,7 @@ export async function createTurboResource<T = any>(
   if (computedKey.value) {
     resource.value = await turboQuery<T>(computedKey.value, {
       stale: true,
+      ...contextOptions,
       ...options,
     })
   }
@@ -204,9 +205,9 @@ export async function createTurboResource<T = any>(
   /**
    * Refetches the current key.
    */
-  async function refetch(ops?: TurboQueryOptions): Promise<T | undefined> {
+  async function refetch(): Promise<T | undefined> {
     if (!computedKey.value) return
-    return await turboQuery<T>(computedKey.value, { stale: false, ...options, ...ops })
+    return await turboQuery<T>(computedKey.value, { stale: false, ...contextOptions, ...options })
   }
 
   /**
@@ -402,6 +403,7 @@ export async function createTurboResource<T = any>(
 
       resource.value = await turboQuery<T>(key, {
         stale: true,
+        ...contextOptions,
         ...options,
       })
 
