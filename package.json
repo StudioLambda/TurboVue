@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "name": "turbo-vue",
   "description": "Lightweight asynchronous data management for vue",
@@ -23,11 +23,11 @@
   },
   "types": "./dist/turbo-vue.d.ts",
   "main": "./dist/turbo-vue.umd.js",
-  "module": "./dist/turbo-vue.es.js",
+  "module": "./dist/turbo-vue.mjs",
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "import": "./dist/turbo-vue.es.js",
+      "import": "./dist/turbo-vue.mjs",
       "require": "./dist/turbo-vue.umd.js"
     }
   },
