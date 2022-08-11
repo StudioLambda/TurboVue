@@ -25,6 +25,25 @@ export interface TurboVueOptions extends TurboQueryOptions {
   readonly turbo?: TurboQuery
 
   /**
+   * Determines if it should refetch keys when
+   * the window regains focus. You can also
+   * set the desired `focusInterval`.
+   */
+  readonly refetchOnFocus?: boolean
+
+  /**
+   * Determines if it should refetch keys when
+   * the window regains focus.
+   */
+  readonly refetchOnConnect?: boolean
+
+  /**
+   * Determines a throttle interval for the
+   * `refetchOnFocus`. Defaults to 5000 ms.
+   */
+  readonly focusInterval?: number
+
+  /**
    * Clears the resource signal by setting it to
    * undefined when the key is forgotten from the cache.
    */
@@ -61,6 +80,13 @@ export interface TurboVueResourceActions<T> {
    * Determines if it's refetching in the background.
    */
   readonly isRefetching: Readonly<Ref<boolean>>
+
+  /**
+   * Determines the date of the last window focus.
+   * Useful to calculate how many time is left
+   * for the next available focus refetching.
+   */
+  readonly lastFocus: Readonly<Ref<Date>>
 }
 
 export type TurboVueResource<T> = [
@@ -93,6 +119,9 @@ export async function createTurboResource<T = any>(
   const turboSubscribe = options?.turbo?.subscribe ?? contextOptions?.turbo?.subscribe ?? subscribe
   const turboForget = options?.turbo?.forget ?? contextOptions?.turbo?.forget ?? forget
   const turboAbort = options?.turbo?.abort ?? contextOptions?.turbo?.abort ?? abort
+  const refetchOnFocus = options?.refetchOnFocus ?? contextOptions?.refetchOnFocus ?? true
+  const refetchOnConnect = options?.refetchOnConnect ?? contextOptions?.refetchOnConnect ?? true
+  const focusInterval = options?.focusInterval ?? contextOptions?.focusInterval ?? 5000
   const clearOnForget = options?.clearOnForget ?? contextOptions?.clearOnForget ?? false
 
   /**
@@ -172,6 +201,39 @@ export async function createTurboResource<T = any>(
     turboAbort(computedKey.value, reason)
   }
 
+  const lastFocus = ref<Date>(new Date())
+
+  /**
+   * The onFocus function handler.
+   */
+  function onFocus(listener: () => void): () => void {
+    if (refetchOnFocus && typeof window !== 'undefined') {
+      const rawHandler = () => {
+        const last = lastFocus.value
+        const now = new Date()
+
+        if (now.getTime() - last.getTime() > focusInterval) {
+          lastFocus.value = new Date()
+          listener()
+        }
+      }
+      window.addEventListener('focus', rawHandler)
+      return () => window.removeEventListener('focus', rawHandler)
+    }
+    return () => {}
+  }
+
+  /**
+   * The onConnect function handler.
+   */
+  function onConnect(listener: () => void): () => void {
+    if (refetchOnConnect && typeof window !== 'undefined') {
+      window.addEventListener('online', listener)
+      return () => window.removeEventListener('online', listener)
+    }
+    return () => {}
+  }
+
   /**
    * Usubscribes from the current key changes.
    */
@@ -203,6 +265,20 @@ export async function createTurboResource<T = any>(
         if (clearOnForget) resource.value = undefined
       })
 
+      /**
+       * Subscribe to focus changes if needed.
+       */
+      const unsubscribeFocusRefetch = onFocus(function () {
+        refetch()
+      })
+
+      /**
+       * Subscribe to network connect changes if needed.
+       */
+      const unsubscribeConnectRefetch = onConnect(function () {
+        refetch()
+      })
+
       resource.value = await turboQuery<T>(key, {
         stale: true,
         ...options,
@@ -214,6 +290,8 @@ export async function createTurboResource<T = any>(
         unsubscribeResolved()
         unsubscribeErrors()
         unsubscribeForgotten()
+        unsubscribeFocusRefetch()
+        unsubscribeConnectRefetch()
       })
     },
     { immediate: true }
@@ -231,6 +309,7 @@ export async function createTurboResource<T = any>(
       abort: localAbort,
       unsubscribe,
       isRefetching: readonly(isRefetching),
+      lastFocus: readonly(lastFocus),
     },
   ]
 }
