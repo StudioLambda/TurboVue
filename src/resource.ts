@@ -22,39 +22,45 @@ export interface TurboVueOptions extends TurboQueryOptions {
   /**
    * A default turbo query instance to use if any.
    */
-  turbo?: TurboQuery
+  readonly turbo?: TurboQuery
+
+  /**
+   * Clears the resource signal by setting it to
+   * undefined when the key is forgotten from the cache.
+   */
+  readonly clearOnForget?: boolean
 }
 
 export interface TurboVueResourceActions<T> {
   /**
    * Refetches the current key.
    */
-  refetch(ops?: TurboQueryOptions): Promise<T | undefined>
+  readonly refetch: (ops?: TurboQueryOptions) => Promise<T | undefined>
 
   /**
    * Mutates the current key.
    */
-  mutate(value: TurboMutateValue<T>): void
+  readonly mutate: (value: TurboMutateValue<T>) => void
 
   /**
    * Usubscribes from the current key changes.
    */
-  unsubscribe(): void
+  readonly unsubscribe: () => void
 
   /**
    * Forgets the current key from the cache.
    */
-  forget(): void
+  readonly forget: () => void
 
   /**
    * Aborts the current key's request if any.
    */
-  abort(reason?: any): void
+  readonly abort: (reason?: any) => void
 
   /**
    * Determines if it's refetching in the background.
    */
-  isRefetching: Readonly<Ref<boolean>>
+  readonly isRefetching: Readonly<Ref<boolean>>
 }
 
 export type TurboVueResource<T> = [
@@ -87,6 +93,7 @@ export async function createTurboResource<T = any>(
   const turboSubscribe = options?.turbo?.subscribe ?? contextOptions?.turbo?.subscribe ?? subscribe
   const turboForget = options?.turbo?.forget ?? contextOptions?.turbo?.forget ?? forget
   const turboAbort = options?.turbo?.abort ?? contextOptions?.turbo?.abort ?? abort
+  const clearOnForget = options?.clearOnForget ?? contextOptions?.clearOnForget ?? false
 
   /**
    * Key computation
@@ -192,6 +199,10 @@ export async function createTurboResource<T = any>(
         error.value = e
       })
 
+      const unsubscribeForgotten = turboSubscribe<T>(key, 'forgotten', function () {
+        if (clearOnForget) resource.value = undefined
+      })
+
       resource.value = await turboQuery<T>(key, {
         stale: true,
         ...options,
@@ -202,6 +213,7 @@ export async function createTurboResource<T = any>(
         unsubscribeRefetching()
         unsubscribeResolved()
         unsubscribeErrors()
+        unsubscribeForgotten()
       })
     },
     { immediate: true }

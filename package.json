@@ -42,14 +42,14 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "typescript": "^4.6.2",
-    "vite": "^2.8.6",
-    "@vitejs/plugin-vue": "^2.2.4"
+    "typescript": "^4.7.4",
+    "vite": "^3.0.5",
+    "@vitejs/plugin-vue": "^3.0.1"
   },
   "peerDependencies": {
     "vue": "^3.2.0"
   },
   "dependencies": {
-    "turbo-query": "^1.4.0"
+    "turbo-query": "^1.7.0"
   }
 }
