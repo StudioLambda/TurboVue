@@ -1,6 +1,6 @@
 import type { TurboQuery, TurboQueryOptions, TurboMutateValue } from 'turbo-query'
 import type { Ref, DeepReadonly, InjectionKey } from 'vue'
-import { query, mutate, subscribe, forget, abort } from 'turbo-query'
+import { query, mutate, subscribe, forget, abort, expiration } from 'turbo-query'
 import { computed, ref, watch, readonly, onUnmounted, getCurrentInstance, inject } from 'vue'
 
 /**
@@ -87,6 +87,36 @@ export interface TurboVueResourceActions<T> {
    * for the next available focus refetching.
    */
   readonly lastFocus: Readonly<Ref<Date>>
+
+  /**
+   * Creates a ref that every given precision interval
+   * will determine if the current key is available
+   * to refetch via focus. and how many time need to pass till
+   * it's available to refetch by focus. This function helps creating
+   * the controlled ref on demand rather than creating
+   * arbitrary refs ourselves just in case.
+   * Return value is [isAvailable (readonly ref), availableIn (readonly ref)]
+   */
+  readonly createFocusAvailable: (
+    precision: number
+  ) => [Readonly<Ref<boolean>>, Readonly<Ref<number>>]
+
+  /**
+   * Determines when the current key expires if
+   * it's currently in the cache.
+   */
+  readonly expiration: () => Date | undefined
+
+  /**
+   * Creates a signal that every given pricesion interval
+   * will determine if the current key is currently expired / stale
+   * and how many time needs to pass till its considered expired / stale.
+   * This function helps creating
+   * the controlled ref on demand rather than creating
+   * arbitrary refs ourselves just in case.
+   * Return value is [isStale (readonly ref), staleIn (readonly ref)]
+   */
+  readonly createStale: (precision: number) => [Readonly<Ref<boolean>>, Readonly<Ref<number>>]
 }
 
 export type TurboVueResource<T> = [
@@ -122,6 +152,8 @@ export async function createTurboResource<T = any>(
   const refetchOnFocus = options?.refetchOnFocus ?? contextOptions?.refetchOnFocus ?? true
   const refetchOnConnect = options?.refetchOnConnect ?? contextOptions?.refetchOnConnect ?? true
   const focusInterval = options?.focusInterval ?? contextOptions?.focusInterval ?? 5000
+  const turboExpiration =
+    options?.turbo?.expiration ?? contextOptions?.turbo?.expiration ?? expiration
   const clearOnForget = options?.clearOnForget ?? contextOptions?.clearOnForget ?? false
 
   /**
@@ -235,6 +267,95 @@ export async function createTurboResource<T = any>(
   }
 
   /**
+   * Composable isFocusAvailable signal.
+   */
+  function createFocusAvailable(
+    precision: number
+  ): [Readonly<Ref<boolean>>, Readonly<Ref<number>>] {
+    const isAvailable = ref(new Date().getTime() - lastFocus.value.getTime() > focusInterval)
+    const availableIn = ref(focusInterval)
+
+    const interval = setInterval(function () {
+      const last = lastFocus.value
+      const now = new Date()
+      const availability = focusInterval - (now.getTime() - last.getTime())
+      if (availability >= 0) availableIn.value = availability
+      else if (availability < 0 && availableIn.value > 0) availableIn.value = 0
+      isAvailable.value = now.getTime() - last.getTime() > focusInterval
+    }, precision)
+
+    onUnmounted(function () {
+      clearInterval(interval)
+    })
+
+    return [isAvailable, availableIn]
+  }
+
+  /**
+   * Returns the expiration date of the current key.
+   * If the item is not in the cache, it will return undefined.
+   */
+  function localExpiration(): Date | undefined {
+    const key = computedKey.value
+    if (!key) return undefined
+
+    return turboExpiration(key)
+  }
+
+  /**
+   * Creates a signal that every given pricesion interval
+   * will determine if the current key is currently expired / stale
+   * and how many time needs to pass till its considered expired / stale.
+   * This function helps creating
+   * the controlled sigal on demand rather than creating
+   * arbitrary signals ourselves just in case.
+   * Return value is [isStale, staleIn]
+   */
+  function createStale(precision: number): [Readonly<Ref<boolean>>, Readonly<Ref<number>>] {
+    const now = new Date()
+    const initialKey = computedKey.value
+
+    let initialIsStale = true
+    let initialStaleIn = 0
+
+    if (initialKey) {
+      const expiresAt = expiration(initialKey)
+      if (expiresAt) {
+        const expirationIn = expiresAt.getTime() - now.getTime()
+        if (expirationIn >= 0) initialStaleIn = expirationIn
+        initialIsStale = expiresAt.getTime() < now.getTime()
+      }
+    }
+
+    const isStale = ref(initialIsStale)
+    const staleIn = ref(initialStaleIn)
+
+    const unsubscribe = watch(computedKey, function (key, _old, onCleanup) {
+      const interval = setInterval(function () {
+        if (!key) return
+        const expiresAt = expiration(key)
+        if (expiresAt) {
+          const now = new Date()
+          const expirationIn = expiresAt.getTime() - now.getTime()
+          if (expirationIn >= 0) staleIn.value = expirationIn
+          else if (expirationIn < 0 && staleIn.value > 0) staleIn.value = 0
+          isStale.value = expiresAt.getTime() < now.getTime()
+        }
+      }, precision)
+
+      onCleanup(function () {
+        clearInterval(interval)
+      })
+    })
+
+    onUnmounted(function () {
+      unsubscribe()
+    })
+
+    return [isStale, staleIn]
+  }
+
+  /**
    * Usubscribes from the current key changes.
    */
   const unsubscribe = watch(
@@ -310,6 +431,9 @@ export async function createTurboResource<T = any>(
       unsubscribe,
       isRefetching: readonly(isRefetching),
       lastFocus: readonly(lastFocus),
+      createFocusAvailable,
+      expiration: localExpiration,
+      createStale,
     },
   ]
 }
