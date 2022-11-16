@@ -1,5 +1,5 @@
 import type { TurboQuery, TurboQueryOptions, TurboMutateValue } from 'turbo-query'
-import type { Ref, DeepReadonly, InjectionKey } from 'vue'
+import type { Ref, InjectionKey } from 'vue'
 import { query, mutate, subscribe, forget, abort, expiration } from 'turbo-query'
 import { computed, ref, watch, readonly, onUnmounted, getCurrentInstance, inject } from 'vue'
 
@@ -123,7 +123,7 @@ export type TurboVueResource<T> = [
   /**
    * The resulting resource.
    */
-  Readonly<Ref<DeepReadonly<T> | undefined>>,
+  Readonly<Ref<T | undefined>>,
 
   /**
    * Available actions on that resource.
@@ -424,7 +424,7 @@ export async function createTurboResource<T = any>(
   if (getCurrentInstance()) onUnmounted(() => unsubscribe())
 
   return [
-    readonly(resource),
+    resource,
     {
       refetch,
       mutate: localMutate,

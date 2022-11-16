@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.4",
   "license": "MIT",
   "name": "turbo-vue",
   "description": "Lightweight asynchronous data management for vue",
@@ -39,7 +39,8 @@
     "start": "vite",
     "dev": "vite --force",
     "build": "vite build && tsc --skipLibCheck",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "typescript": "^4.7.4",
